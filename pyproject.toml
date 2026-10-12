@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "manipulator-lab"
+version = "0.1.0"
+description = "Planar 2-link manipulator: kinematics, singularity analysis, and trajectory planning built on a numerical methods toolkit"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0",
+    "numerical-methods-toolkit @ git+https://github.com/faridakhmad437-bit/Numerical-Method-Toolkit.git@v1.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6", "matplotlib>=3.9"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E9", "F"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

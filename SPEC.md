@@ -1,0 +1,316 @@
+# SPEC — Manipulator Lab: Kinematics and Trajectory Planning
+
+**Owner:** Farid Akhmad
+**Status:** DRAFT v0.3 (semua keputusan terbuka terisi; tes kelompok A–B dan FK/IK analitik/reachability sudah ada)
+**Tanggal:** 12 Oktober 2026
+**Posisi dalam roadmap:** Project 1, setelah Numerical Method Toolkit (NMT)
+**Estimasi:** 4–6 minggu (5–7 jam/minggu)
+
+> Semua angka toleransi dan target di dokumen ini adalah **target yang diusulkan**, bukan hasil terverifikasi. Hasil pengukuran baru boleh dicantumkan di README setelah dijalankan dan direproduksi.
+
+---
+
+## 1. Tujuan dan masalah yang diselesaikan
+
+**Tujuan.** Membangun simulator lengan robot planar 2-link yang menghitung forward kinematics (FK), inverse kinematics (IK), mendeteksi target di luar jangkauan, menganalisis singularitas, dan menghasilkan trajektori joint yang mulus, lengkap dengan tes otomatis dan visualisasi.
+
+**Masalah.** Diberikan target posisi ujung lengan (x, y), tentukan sudut joint (θ₁, θ₂) yang mencapainya, putuskan apakah target dapat dicapai, lalu gerakkan lengan ke sana dengan profil gerak yang halus.
+
+**Mengapa penting untuk portofolio.** Proyek ini menjembatani NMT (matematika numerik) ke robotika: model matematika, pembanding analitik vs numerik, analisis conditioning di dekat singularitas, dan validasi otomatis. Proyek ini juga menjadi modul kinematika yang dipakai ulang oleh Project 3 (Vision-Guided Capstone).
+
+**Kemampuan yang dibuktikan:** pemodelan matematis, penurunan solusi analitik, penggunaan NMT sebagai dependensi nyata, analisis stabilitas numerik, testing berbasis invariant, dan komunikasi teknis (diagram, plot, demo).
+
+**Pembeda dari contoh IK di NMT.** NMT sudah memiliki IK planar 2-link. Proyek ini harus menambah nilai: baseline analitik, perbandingan metode, analisis workspace dan singularitas, trajektori, dan visualisasi. Bukan mengulang contoh yang sama.
+
+---
+
+## 2. Scope
+
+### In scope (MVP)
+1. FK planar 2-link.
+2. IK analitik (kedua cabang: elbow-up dan elbow-down).
+3. IK numerik memakai Newton dari NMT, dibandingkan dengan solusi analitik.
+4. Pemeriksaan reachability dengan alasan penolakan yang eksplisit.
+5. Visualisasi: lengan, target, batas workspace, target tak terjangkau.
+6. Analisis singularitas dan conditioning Jacobian.
+7. Trajektori joint-space: linear dan cubic (rest-to-rest).
+8. Suite tes otomatis dan evaluasi terukur yang reproducible.
+
+### Out of scope (versi pertama)
+- Perangkat keras fisik, ROS 2, Gazebo.
+- Lengan 3D atau lebih dari 2 link, dinamika (torsi, massa, gesekan).
+- Antarmuka web atau GUI interaktif.
+- Penghindaran tabrakan (stretch goal).
+
+### Stretch goals (hanya setelah MVP lulus semua gate)
+- Trajektori quintic dan perbandingan tiga profil.
+- Batas joint (joint limits) dan pemilihan cabang IK yang valid.
+- Pemeriksaan tabrakan sederhana dengan lingkaran/kotak.
+
+---
+
+## 3. Model matematika
+
+### 3.1 Konvensi
+- Satuan: panjang dalam **meter**, sudut dalam **radian**, waktu dalam **detik**.
+- Frame dunia {0} di pangkal lengan; sumbu x ke kanan, y ke atas, sudut positif berlawanan arah jarum jam.
+- Parameter: panjang link l₁, l₂ > 0. **Default: l₁ = 1.0 m, l₂ = 0.8 m** (jangkauan 0.2 ≤ r ≤ 1.8 m; l₁ ≠ l₂ agar lubang tak terjangkau di tengah terlihat di demo). **Durasi demo trajektori: T = 2.0 s.** Semua dapat diubah lewat argumen.
+- θ₁ diukur dari sumbu x ke link 1; θ₂ adalah sudut relatif link 2 terhadap link 1.
+
+### 3.2 Forward kinematics
+```
+x = l₁ cos θ₁ + l₂ cos(θ₁ + θ₂)
+y = l₁ sin θ₁ + l₂ sin(θ₁ + θ₂)
+```
+
+### 3.3 Inverse kinematics analitik
+Misalkan r² = x² + y².
+```
+cos θ₂ = (r² − l₁² − l₂²) / (2 l₁ l₂)
+θ₂ = ± arccos(cos θ₂)                      # + : elbow-down, − : elbow-up (konvensi dicatat di kode)
+θ₁ = atan2(y, x) − atan2(l₂ sin θ₂, l₁ + l₂ cos θ₂)
+```
+**Reachability:** target dapat dicapai jika |l₁ − l₂| ≤ r ≤ l₁ + l₂. Karena cos θ₂ harus berada di [−1, 1], implementasi harus menangani galat floating-point di batas (clamp dengan toleransi eksplisit, bukan clamp diam-diam).
+
+### 3.4 Jacobian dan singularitas
+```
+J(θ) = [ −l₁ sin θ₁ − l₂ sin(θ₁+θ₂)    −l₂ sin(θ₁+θ₂) ]
+       [  l₁ cos θ₁ + l₂ cos(θ₁+θ₂)     l₂ cos(θ₁+θ₂) ]
+
+det J = l₁ l₂ sin θ₂
+```
+Singularitas terjadi saat sin θ₂ = 0 (lengan terentang penuh atau terlipat penuh). Di dekat titik itu, J ill-conditioned: iterasi Newton memerlukan solusi sistem linear dengan matriks hampir singular, sehingga langkah iterasi bisa membesar dan konvergensi memburuk. Ini harus diperlihatkan lewat eksperimen (nomor kondisi vs θ₂, iterasi Newton vs jarak ke batas workspace).
+
+### 3.5 Trajektori joint-space
+Untuk setiap joint dari q₀ ke q_f dalam durasi T:
+
+- **Linear:** q(t) = q₀ + (q_f − q₀)·t/T. Posisi kontinu, tetapi kecepatan melompat di t = 0 dan t = T.
+- **Cubic rest-to-rest** (q̇(0) = q̇(T) = 0):
+  ```
+  q(t) = q₀ + 3Δ (t/T)² − 2Δ (t/T)³,   Δ = q_f − q₀
+  ```
+  Bentuk umum q(t) = a₀ + a₁t + a₂t² + a₃t³ dengan syarat batas posisi dan kecepatan menghasilkan sistem linear 4×4. Sistem itu dapat diselesaikan dengan Gaussian elimination NMT sebagai **pemeriksa silang** terhadap rumus tertutup di atas.
+- **Quintic** (stretch): menambah syarat percepatan nol di ujung (kontinuitas C²).
+
+---
+
+## 4. Arsitektur
+
+```
+manipulator-lab/
+├── pyproject.toml
+├── README.md
+├── SPEC.md
+├── src/manipulator_lab/
+│   ├── __init__.py
+│   ├── arm.py            # dataclass PlanarArm(l1, l2), validasi parameter
+│   ├── kinematics.py     # fk(), ik_analytic(), jacobian(), is_reachable()
+│   ├── ik_numeric.py     # adapter ke Newton NMT + pembanding
+│   ├── workspace.py      # sampling workspace, batas jangkauan, peta conditioning
+│   ├── trajectory.py     # linear, cubic (quintic stretch)
+│   └── viz.py            # plot dan animasi Matplotlib (tanpa logika matematika)
+├── tests/
+│   ├── test_kinematics.py
+│   ├── test_reachability.py
+│   ├── test_trajectory.py
+│   └── test_ik_numeric.py
+├── experiments/
+│   ├── run_ik_comparison.py
+│   └── run_trajectory_profiles.py
+└── docs/
+    ├── frames.png
+    └── results/          # plot, tabel, dan metadata lingkungan
+```
+
+**Aliran data:** `target (x, y)` → `is_reachable` → `ik_analytic / ik_numeric` → `q_goal` → `trajectory` → `q(t)` → `fk` → `viz`.
+
+**Prinsip desain:**
+- Logika matematika tidak boleh bergantung pada Matplotlib (visualisasi adalah lapisan terluar).
+- Fungsi murni dengan input tervalidasi; error dilaporkan lewat exception atau hasil bertipe yang eksplisit (mis. `reachable=False` + alasan), bukan nilai NaN diam-diam.
+- Pemakaian NMT hanya lewat `ik_numeric.py` (dan pemeriksa silang kubik), agar versi dependensi mudah dipin dan diganti.
+
+**Dependensi NMT (dikonfirmasi dari kode v1.0.0, commit `e9e6a4e`).**
+
+- Nama distribusi: `numerical-methods-toolkit`; nama import: `numerical_toolkit`.
+- Pin di `pyproject.toml`:
+  ```toml
+  dependencies = [
+      "numpy>=2.0",
+      "numerical-methods-toolkit @ git+https://github.com/faridakhmad437-bit/Numerical-Method-Toolkit.git@v1.0.0",
+  ]
+  ```
+- API yang dipakai (semua diekspor dari `numerical_toolkit`):
+
+| Kebutuhan | Fungsi | Signature | Keluaran |
+|---|---|---|---|
+| IK numerik (utama) | `newton_system` | `newton_system(F, J, x0, *, options=None)` | `SolverResult` |
+| IK numerik (pembanding bawaan) | `planar_2link_ik` | `planar_2link_ik(target, l1, l2, initial=(0.0, 0.0), *, options=None)` | `SolverResult` |
+| Pemeriksa silang kubik | `gaussian_elimination` | `gaussian_elimination(A, b)` | `np.ndarray` (solusi `x`) |
+| Konfigurasi | `SolverOptions` | `xtol=1e-10, rtol=1e-8, ftol=1e-10, maxiter=100, store_history=True` (frozen dataclass) | |
+| Hasil | `SolverResult` | `solution, converged, iterations, function_calls, residual, step_error, message, history` | |
+
+- Pakai `newton_system` dengan `F` dan `J` milik Manipulator Lab (bukan `planar_2link_ik`), supaya Jacobian yang dianalisis di proyek ini adalah Jacobian yang sama dengan yang dipakai solver. `planar_2link_ik` dipakai sebagai pembanding.
+- Perilaku NMT yang harus ditangani adapter `ik_numeric.py` (terverifikasi lewat smoke test, bukan asumsi):
+  1. **Cabang ditentukan oleh tebakan awal.** Target FK(0.6, −0.9) dengan tebakan (0.3, −0.5) menghasilkan θ₂ = −0.9 (elbow-up); tebakan (0.3, +0.5) menghasilkan θ₂ = +0.9 (elbow-down).
+  2. **Tebakan awal default (0, 0) singular** (sin θ₂ = 0) dan melempar `InvalidInputError("Jacobian is singular.")`. Adapter harus menyediakan tebakan awal sendiri dan tidak memakai default NMT.
+  3. **Target di luar jangkauan:** `planar_2link_ik` mengembalikan `converged=False`, `iterations=0`, `residual=None` (tidak melempar). Pemeriksaan jangkauannya memakai perbandingan ketat tanpa toleransi, sehingga `is_reachable` milik proyek ini mendefinisikan toleransinya sendiri.
+  4. `newton_system` hanya melempar error bila `np.linalg.solve` gagal pada matriks singular tepat. Matriks hampir singular lolos dan menghasilkan langkah besar; ini justru perilaku yang dieksperimenkan di Kelompok D.
+  5. `SolverResult` memvalidasi `residual` bertipe real, finite, ≥ 0, atau `None`.
+
+**Stack:** Python 3.11+, NumPy, Matplotlib, pytest. Semua gratis.
+
+---
+
+## 5. Requirements
+
+| ID | Requirement |
+|---|---|
+| FR-1 | `fk(arm, theta)` mengembalikan posisi ujung lengan; menerima array sudut dan menolak input tak valid. |
+| FR-2 | `ik_analytic(arm, target, branch)` mengembalikan (θ₁, θ₂) untuk cabang yang diminta, atau hasil "tidak terjangkau" dengan alasan. |
+| FR-3 | `is_reachable(arm, target)` berlaku konsisten dengan FR-2 di seluruh batas workspace. |
+| FR-4 | `jacobian(arm, theta)` dan `condition_number` tersedia; singularitas terdeteksi dengan ambang eksplisit. |
+| FR-5 | IK numerik (Newton NMT) menerima tebakan awal dan melaporkan iterasi, residual, dan status konvergensi. |
+| FR-6 | `trajectory.linear` dan `trajectory.cubic` menghasilkan q(t), q̇(t) pada grid waktu yang diberikan. |
+| FR-7 | Visualisasi menampilkan lengan, target, batas workspace, dan penanda target tak terjangkau. |
+| FR-8 | Eksperimen dapat dijalankan ulang dengan satu perintah, dengan seed dan konfigurasi tercatat. |
+| NFR-1 | Tidak ada klaim performa tanpa pengukuran yang tercatat kondisinya. |
+| NFR-2 | Seluruh test suite lulus sebelum checkpoint/commit. |
+
+---
+
+## 6. Rencana pengujian
+
+Tes ditulis lebih dulu (test-first) untuk tiap kelompok.
+
+### Kelompok A — Konsistensi FK ↔ IK
+- Untuk grid sudut (θ₁, θ₂) yang valid: `ik_analytic(fk(θ))` menghasilkan konfigurasi yang jika dimasukkan ke FK kembali ke titik semula dalam toleransi. Perbandingan dilakukan di ruang posisi, bukan sudut, karena sudut ill-conditioned di dekat batas workspace.
+- Kedua cabang (elbow-up/down) menghasilkan posisi ujung yang sama.
+- Kasus khusus: θ₂ = 0 dan θ₂ = π (singular), θ₁ di sekitar ±π (wrap-around sudut).
+
+### Kelompok B — Reachability
+- Titik di dalam, tepat di batas luar (r = l₁ + l₂), tepat di batas dalam (r = |l₁ − l₂|), dan sedikit di luar: hasil harus benar dan konsisten.
+- Kasus l₁ = l₂ (batas dalam menjadi titik asal) ditangani tanpa pembagian nol atau NaN.
+- Input tidak valid (NaN, inf, panjang link ≤ 0) ditolak dengan error jelas.
+
+### Kelompok C — Trajektori
+- Endpoint: q(0) = q₀ dan q(T) = q_f.
+- Cubic: q̇(0) = q̇(T) = 0; linear: kecepatan konstan.
+- Hasil rumus tertutup kubik sama dengan solusi sistem 4×4 via NMT (dalam toleransi).
+- Posisi dan kecepatan kontinu pada grid waktu; T ≤ 0 ditolak.
+
+### Kelompok D — IK numerik vs analitik
+- Dari tebakan awal yang wajar, Newton konvergen ke salah satu dari dua solusi analitik.
+- Di dekat singularitas, perilaku (iterasi bertambah, gagal konvergen, atau cabang berbeda) dicatat sebagai hasil eksperimen, bukan disembunyikan.
+- Tebakan awal tepat di singularitas (θ₂ = 0) menghasilkan `InvalidInputError` dari NMT; adapter harus mengubahnya menjadi hasil terstruktur (`converged=False` + alasan) atau error proyek yang jelas.
+- Cabang hasil Newton ditentukan tebakan awal; tes memastikan tebakan dengan θ₂ < 0 mendarat di elbow-up dan θ₂ > 0 di elbow-down untuk target yang jelas di dalam workspace.
+
+**Toleransi (ditetapkan v0.3):**
+
+| Tes | Toleransi | Status |
+|---|---|---|
+| FK(IK analitik(target)) vs target | 1e-9 m (ruang posisi) | Dipakai di tes A–B; galat teramati 1.3e-15 m (grid 25×25 × 2 cabang) |
+| Cek jangkauan (`REACH_TOL`) | 1e-9 m pada radius | Dipakai; hanya menyerap noise float |
+| Sudut θ₂ di batas workspace | 1e-6 rad | Dipakai; galat teramati 0 |
+| Newton vs analitik (sudut) | 1e-6 rad, hanya jauh dari singularitas | Belum diuji (kelompok D) |
+| Residual Newton | ≤ 1e-9 m (default NMT `ftol` = 1e-10) | Belum diuji (kelompok D) |
+| Endpoint trajektori (posisi, kecepatan) | 1e-12 | Belum diuji (kelompok C) |
+
+Aturan: toleransi tidak boleh dilonggarkan agar tes lulus. Perubahan harus disertai pengukuran galat dan alasannya. Kelonggaran saat ini jauh di atas galat teramati (1e-9 vs 1.3e-15); boleh diperketat setelah dibandingkan di mesin lain.
+
+---
+
+## 7. Protokol evaluasi (untuk bukti di README)
+
+1. **Grid target:** sampel titik reachable dan unreachable pada grid tetap (resolusi dicatat), plus subset acak dengan seed tetap.
+2. **Metrik IK:** galat posisi akhir, galat vs solusi analitik, jumlah iterasi Newton, tingkat konvergensi, dan runtime (median dari beberapa kali run; dicatat Python/NumPy/OS/CPU).
+3. **Metrik singularitas:** nomor kondisi J vs θ₂; iterasi Newton vs jarak ke batas workspace.
+4. **Metrik trajektori:** galat endpoint, kecepatan maksimum, dan lonjakan kecepatan/percepatan pada linear vs cubic.
+5. **Aturan:** semua metode dibandingkan pada target dan tebakan awal yang sama; definisi "berhasil" ditulis sebelum eksperimen dijalankan; kegagalan dilaporkan.
+
+### Lingkungan pengukuran (tercatat 12 Oktober 2026, mesin pengembangan)
+
+| Item | Nilai |
+|---|---|
+| OS | Windows 11 (Windows-11-10.0.26200-SP0) |
+| Python | 3.14.3 (MSC v.1944, 64-bit AMD64) |
+| NumPy | 2.5.4 |
+| CPU | 13th Gen Intel Core i5-13450HX |
+
+Angka runtime di README hanya boleh berasal dari mesin ini. Tes yang dijalankan di sandbox Linux (Python 3.13) hanya dipakai untuk verifikasi fungsional, bukan untuk angka performa. Skrip eksperimen perlu mencetak ulang versi Python/NumPy/OS/CPU ke `docs/results/` setiap kali dijalankan.
+
+---
+
+## 8. Deliverables
+
+- Repositori `manipulator-lab` dengan struktur di atas, `pyproject.toml`, lisensi, dan CI/lint hanya jika benar-benar dijalankan.
+- Test suite (kelompok A–D) yang lulus.
+- Dua skrip eksperimen yang reproducible dengan hasil tersimpan di `docs/results/`.
+- Diagram frame koordinat dan diagram arsitektur.
+- GIF/video pendek: lengan mengikuti trajektori ke target, termasuk satu contoh target tak terjangkau.
+- Plot: posisi, kecepatan joint, dan galat; nomor kondisi vs θ₂.
+- README: tujuan, instalasi, quick-start, hasil beserta kondisi pengukuran, batasan.
+- Satu engineering note: "Mengapa IK numerik memburuk di dekat singularitas."
+
+---
+
+## 9. Kriteria keberhasilan (Definition of Done)
+
+- [ ] Pengguna baru dapat menginstal, menjalankan simulator, mengubah target, dan melihat hasil reachable/unreachable.
+- [ ] Seluruh tes kelompok A–D lulus pada commit rilis.
+- [ ] IK analitik dan numerik dibandingkan pada target yang sama, hasil terdokumentasi.
+- [ ] Perilaku di dekat singularitas dijelaskan dengan bukti (plot/tabel).
+- [ ] Trajektori cubic terbukti memenuhi syarat batas dan dibandingkan dengan linear.
+- [ ] Angka di README berasal dari run yang tercatat (lingkungan, seed, perintah).
+- [ ] Batasan dan hal yang di luar scope tertulis jelas.
+- [ ] Reviewer dapat melihat kontribusi pribadi dengan jelas.
+
+---
+
+## 10. Milestone (estimasi, bisa bergeser)
+
+| Minggu | Fokus | Gate keluar |
+|---|---|---|
+| 1 | Setup repo, spec final, tes kelompok A–B (merah), FK + IK analitik | Tes A–B hijau |
+| 2 | Reachability, Jacobian, workspace sampling | Peta workspace + conditioning |
+| 3 | IK numerik via NMT, eksperimen perbandingan | Tabel hasil + tes D |
+| 4 | Trajektori linear dan cubic, tes C | Tes C hijau, plot profil |
+| 5 | Visualisasi dan animasi, README, diagram | Demo GIF berjalan |
+| 6 (buffer) | Engineering note, rapikan, verifikasi dari environment bersih | Checklist DoD terpenuhi |
+
+Jika waktu mingguan hanya 2–3 jam, perpanjang jadwal, jangan pangkas tes dan dokumentasi.
+
+---
+
+## 11. Risiko dan mitigasi
+
+| Risiko | Mitigasi |
+|---|---|
+| API NMT kurang nyaman dipakai | Isolasi di `ik_numeric.py`; catat temuan sebagai umpan balik untuk NMT |
+| Scope melebar (GUI, kolisi, 3D) | Semua masuk daftar stretch; kerjakan hanya setelah DoD MVP |
+| Galat di batas workspace (floating-point) | Toleransi eksplisit dan tes kelompok B |
+| Klaim performa tanpa dasar | Aturan NFR-1 dan protokol evaluasi bagian 7 |
+| Animasi memakan waktu | Visualisasi ditunda ke minggu 5; logika diuji tanpa plot |
+
+---
+
+## 12. Keputusan terbuka (semua terisi pada v0.3)
+
+1. ~~Konvensi cabang~~ **Selesai:** elbow-up = θ₂ negatif, elbow-down = θ₂ positif.
+2. ~~Nilai default~~ **Selesai:** l₁ = 1.0 m, l₂ = 0.8 m, T = 2.0 s.
+3. ~~Nama dan signature fungsi NMT~~ **Selesai:** lihat bagian 4 (tag `v1.0.0`).
+4. ~~Toleransi~~ **Selesai:** tabel di bagian 6.
+5. ~~Lingkungan pengukuran~~ **Selesai:** tabel di bagian 7.
+
+---
+
+## 13. Status verifikasi
+
+| Item | Status |
+|---|---|
+| Spesifikasi ini | Draft, belum direview |
+| Implementasi | Sebagian: `arm.py`, `kinematics.py` (FK, IK analitik, reachability) |
+| Tes | Kelompok A–B ditulis test-first: 75 tes lulus di sandbox Linux/Python 3.13, `ruff` bersih, 3 uji mutasi terdeteksi; dijalankan juga di mesin Windows pengguna: 75 lulus (Python 3.14.3, pytest 9.1.1), ruff bersih. Kelompok C–D belum ditulis |
+| Hasil eksperimen | Belum ada |
+| API NMT v1.0.0 (nama, signature, perilaku IK dan Gaussian) | Dibaca dari kode dan di-smoke-test (install bersih, IK, target di luar jangkauan, sistem kubik 4×4) |
+| NMT v1.0.0: test suite dan lint | Terverifikasi di sesi ini (clone `e9e6a4e`, Python venv bersih): `pytest` 470 lulus, `ruff check` bersih |
+| NMT v1.0.0: build paket dan status CI GitHub | Belum diverifikasi |
