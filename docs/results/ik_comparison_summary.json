@@ -818,8 +818,8 @@
   "D_runtime": {
     "cases": 936,
     "repeats": 7,
-    "analytic_us_per_call_median": 5.829807692307693,
-    "newton_us_per_call_median": 238.40299145299144,
+    "analytic_us_per_call_median": 7.515705128205128,
+    "newton_us_per_call_median": 232.46442307692305,
     "note": "wall-clock, includes Python overhead and input validation; this machine only"
   },
   "environment": {
@@ -831,7 +831,7 @@
     "logical_cpus": 16,
     "numpy": "2.5.4",
     "manipulator_lab": "0.3.0",
-    "git_commit": "97b7bff",
+    "git_commit": "e86cc11",
     "numerical_toolkit": "1.0.0"
   }
 }

@@ -325,8 +325,8 @@ Jika waktu mingguan hanya 2–3 jam, perpanjang jadwal, jangan pangkas tes dan d
 |---|---|
 | Spesifikasi ini | Draft, belum direview |
 | Implementasi | Sebagian: `arm.py`, `kinematics.py` (FK, IK analitik, reachability, Jacobian, kondisi, singularitas), `workspace.py` (batas, peta kondisi), `ik_numeric.py` (adapter Newton NMT). Trajektori belum |
-| Tes | Minggu 2: 141 tes lulus di mesin Windows pengguna (commit `97b7bff`). Minggu 3 (kelompok D): 180 tes total lulus di sandbox Linux/Python 3.13, `ruff` bersih; 6 uji mutasi, 1 awalnya lolos (penghapusan wrap sudut) lalu ditutup dengan tes baru; **belum dijalankan di mesin Windows pengguna**. Kelompok C belum ditulis |
-| Hasil eksperimen | Conditioning: PASS di mesin pengguna (selisih relatif maksimum 4.7e-14, 102.564 sel). IK numerik: v1 GAGAL, v2 LULUS di sandbox (lihat riwayat di bagian 7); file hasil resmi dibuat oleh `experiments/run_ik_comparison.py` di mesin pengguna |
+| Tes | Minggu 2: 141 tes lulus di mesin Windows pengguna (commit `97b7bff`). Minggu 3 (kelompok D): 180 tes total lulus di sandbox Linux/Python 3.13, `ruff` bersih; 6 uji mutasi, 1 awalnya lolos (penghapusan wrap sudut) lalu ditutup dengan tes baru; dan 180 tes lulus juga di mesin Windows pengguna (commit `e86cc11`, Python 3.14.3, `ruff` bersih). Kelompok C belum ditulis |
+| Hasil eksperimen | Conditioning: PASS di mesin pengguna (selisih relatif maksimum 4.7e-14, 102.564 sel). IK numerik, mesin pengguna (Windows, Python 3.14.3, commit `e86cc11`): v1 GAGAL, v2 LULUS, RESULT: PASS; file hasil resmi ada di `docs/results/` (riwayat di bagian 7). Waktu proses bervariasi sekitar 30% antar-run (median per panggilan, dua run: analitik 5,8 dan 7,5 µs; Newton 238 dan 232 µs), sehingga rasio kecepatan tidak dikutip sebagai klaim tunggal |
 | API NMT v1.0.0 (nama, signature, perilaku IK dan Gaussian) | Dibaca dari kode dan di-smoke-test (install bersih, IK, target di luar jangkauan, sistem kubik 4×4) |
 | NMT v1.0.0: test suite dan lint | Terverifikasi di sesi ini (clone `e9e6a4e`, Python venv bersih): `pytest` 470 lulus, `ruff check` bersih |
 | NMT v1.0.0: build paket dan status CI GitHub | Belum diverifikasi |
