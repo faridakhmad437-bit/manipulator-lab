@@ -1,0 +1,54 @@
+{
+  "experiment": "trajectory",
+  "arm": {
+    "l1": 1.0,
+    "l2": 0.8
+  },
+  "duration_s": 2.0,
+  "samples": 201,
+  "trajectories": 1000,
+  "seed": 0,
+  "criteria_values": {
+    "C1_max_endpoint_error": 4.440892098500626e-16,
+    "C2_max_cubic_end_velocity": 0.0,
+    "C2_max_linear_velocity_error": 0.0,
+    "C3_max_relative_coefficient_difference": 4.633801588455362e-16,
+    "C4_peak_velocity_ratio_min": 1.4999999999999998,
+    "C4_peak_velocity_ratio_max": 1.5000000000000002,
+    "C4_joints_compared": 2000,
+    "C5_max_distance_to_joint_segment": 1.831026719408895e-15,
+    "C6_max_theta2": -0.0028156420932443638,
+    "C7_max_task_space_end_error_m": 1.5151595604785607e-15
+  },
+  "criteria_pass": {
+    "C1": true,
+    "C2": true,
+    "C3": true,
+    "C4": true,
+    "C5": true,
+    "C6": true,
+    "C7": true
+  },
+  "descriptive": {
+    "ee_path_max_deviation_from_chord_m": {
+      "median": 0.5156612226290932,
+      "p95": 1.9763351449322881,
+      "max": 2.9585625321987887
+    },
+    "fraction_theta1_or_theta2_long_way_round": 0.253,
+    "min_abs_sin_theta2_along_path": 0.0005969076183547082,
+    "max_cond_along_path": 1722.5189442675714
+  },
+  "environment": {
+    "python": "3.14.3",
+    "python_implementation": "CPython",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+    "logical_cpus": 16,
+    "numpy": "2.5.4",
+    "manipulator_lab": "0.4.0",
+    "git_commit": "3b39d53",
+    "numerical_toolkit": "1.0.0"
+  }
+}

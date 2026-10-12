@@ -1,5 +1,6 @@
 """Manipulator Lab: planar 2-link kinematics and trajectory planning."""
 
+from . import trajectory
 from .arm import PlanarArm
 from .kinematics import (
     BEYOND_MAX_REACH,
@@ -25,6 +26,7 @@ from .ik_numeric import (
     default_initial_guess,
     ik_newton,
 )
+from .trajectory import PlanResult, Trajectory
 from .workspace import ConditionMap, condition_map, workspace_boundary
 
 __all__ = [
@@ -39,7 +41,9 @@ __all__ = [
     "ConditionMap",
     "IKResult",
     "NumericIKResult",
+    "PlanResult",
     "PlanarArm",
+    "Trajectory",
     "condition_from_theta2",
     "condition_map",
     "condition_number",
@@ -50,7 +54,8 @@ __all__ = [
     "is_reachable",
     "is_singular",
     "jacobian",
+    "trajectory",
     "wrap_to_pi",
     "workspace_boundary",
 ]
-__version__ = "0.3.0"
+__version__ = "0.4.0"
