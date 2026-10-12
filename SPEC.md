@@ -1,7 +1,7 @@
 # SPEC — Manipulator Lab: Kinematics and Trajectory Planning
 
 **Owner:** Farid Akhmad
-**Status:** DRAFT v0.6 (minggu 4 selesai di sandbox: trajektori linear dan kubik; belum diverifikasi di mesin pengguna)
+**Status:** DRAFT v0.6 (minggu 4 selesai dan terverifikasi di mesin pengguna: trajektori linear dan kubik)
 **Tanggal:** 12 Oktober 2026
 **Posisi dalam roadmap:** Project 1, setelah Numerical Method Toolkit (NMT)
 **Estimasi:** 4–6 minggu (5–7 jam/minggu)
@@ -256,7 +256,7 @@ Dicatat apa adanya, termasuk kegagalan:
 
 ### Temuan eksperimen trajektori (minggu 4)
 
-Kriteria C1–C7 ditulis di docstring `experiments/run_trajectory.py` sebelum dijalankan (1000 pasangan awal/tujuan acak, seed 0, T = 2 s, 201 sampel). Hasil di sandbox: semua kriteria terpenuhi (galat endpoint 4.4e-16 rad; rasio kecepatan puncak kubik/linear 1.5 dalam 2e-16; kedua profil menempuh segmen yang sama di ruang sendi; θ₂ ≤ 0 sepanjang lintasan elbow-up ke elbow-up, sehingga tidak pernah melewati singularitas θ₂ = 0). Temuan deskriptif (tanpa kriteria):
+Kriteria C1–C7 ditulis di docstring `experiments/run_trajectory.py` sebelum dijalankan (1000 pasangan awal/tujuan acak, seed 0, T = 2 s, 201 sampel). Hasil di sandbox dan di mesin pengguna: semua kriteria terpenuhi (galat endpoint 4.4e-16 rad; rasio kecepatan puncak kubik/linear 1.5 dalam 2e-16; kedua profil menempuh segmen yang sama di ruang sendi; θ₂ ≤ 0 sepanjang lintasan elbow-up ke elbow-up, sehingga tidak pernah melewati singularitas θ₂ = 0). Temuan deskriptif (tanpa kriteria):
 
 - Linear dan kubik menempuh **lintasan yang sama**; yang berbeda hanya pewaktuannya. Kubik membayar kecepatan puncak 1.5× dan percepatan puncak 6|Δ|/T² untuk kecepatan nol di kedua ujung.
 - Interpolasi sendi **tidak lurus di ruang kerja**: simpangan maksimum jalur ujung terhadap garis lurus median 0,52 m, persentil 95 sebesar 1,98 m, maksimum 2,96 m pada sampel ini.
@@ -284,7 +284,7 @@ Kriteria C1–C7 ditulis di docstring `experiments/run_trajectory.py` sebelum di
 - [ ] Seluruh tes kelompok A–D lulus pada commit rilis.
 - [ ] IK analitik dan numerik dibandingkan pada target yang sama, hasil terdokumentasi.
 - [ ] Perilaku di dekat singularitas dijelaskan dengan bukti (plot/tabel).
-- [ ] Trajektori cubic terbukti memenuhi syarat batas dan dibandingkan dengan linear.
+- [x] Trajektori cubic terbukti memenuhi syarat batas dan dibandingkan dengan linear.
 - [ ] Angka di README berasal dari run yang tercatat (lingkungan, seed, perintah).
 - [ ] Batasan dan hal yang di luar scope tertulis jelas.
 - [ ] Reviewer dapat melihat kontribusi pribadi dengan jelas.
@@ -335,8 +335,8 @@ Jika waktu mingguan hanya 2–3 jam, perpanjang jadwal, jangan pangkas tes dan d
 |---|---|
 | Spesifikasi ini | Draft, belum direview |
 | Implementasi | Sebagian: `arm.py`, `kinematics.py` (FK, IK analitik, reachability, Jacobian, kondisi, singularitas), `workspace.py` (batas, peta kondisi), `ik_numeric.py` (adapter Newton NMT), `trajectory.py` (linear, kubik, pemeriksa silang NMT 4×4, `plan_to_target`). Visualisasi/animasi dan demo belum |
-| Tes | Minggu 2: 141 tes lulus di mesin Windows pengguna (commit `97b7bff`). Minggu 3 (kelompok D): 180 tes total lulus di sandbox Linux/Python 3.13, `ruff` bersih; 6 uji mutasi, 1 awalnya lolos (penghapusan wrap sudut) lalu ditutup dengan tes baru; dan 180 tes lulus juga di mesin Windows pengguna (commit `e86cc11`, Python 3.14.3, `ruff` bersih). Minggu 4 (kelompok C): 252 tes total lulus di sandbox Linux/Python 3.13, `ruff` bersih; 17 uji mutasi pada `trajectory.py`, 1 awalnya lolos (`plan_to_target` mengabaikan profil) lalu ditutup dengan tes baru; **belum dijalankan di mesin Windows pengguna** |
-| Hasil eksperimen | Conditioning: PASS di mesin pengguna (selisih relatif maksimum 4.7e-14, 102.564 sel). IK numerik, mesin pengguna (Windows, Python 3.14.3, commit `e86cc11`): v1 GAGAL, v2 LULUS, RESULT: PASS; file hasil resmi ada di `docs/results/` (riwayat di bagian 7). Waktu proses bervariasi sekitar 30% antar-run (median per panggilan, dua run: analitik 5,8 dan 7,5 µs; Newton 238 dan 232 µs), sehingga rasio kecepatan tidak dikutip sebagai klaim tunggal. Trajektori (W4): PASS di sandbox; file hasil resmi dibuat oleh `experiments/run_trajectory.py` di mesin pengguna |
+| Tes | Minggu 2: 141 tes lulus di mesin Windows pengguna (commit `97b7bff`). Minggu 3 (kelompok D): 180 tes total lulus di sandbox Linux/Python 3.13, `ruff` bersih; 6 uji mutasi, 1 awalnya lolos (penghapusan wrap sudut) lalu ditutup dengan tes baru; dan 180 tes lulus juga di mesin Windows pengguna (commit `e86cc11`, Python 3.14.3, `ruff` bersih). Minggu 4 (kelompok C): 252 tes total lulus di sandbox Linux/Python 3.13, `ruff` bersih; 17 uji mutasi pada `trajectory.py`, 1 awalnya lolos (`plan_to_target` mengabaikan profil) lalu ditutup dengan tes baru; dan 252 tes lulus juga di mesin Windows pengguna (commit `69292d6`, Python 3.14.3, `ruff` bersih) |
+| Hasil eksperimen | Conditioning: PASS di mesin pengguna (selisih relatif maksimum 4.7e-14, 102.564 sel). IK numerik, mesin pengguna (Windows, Python 3.14.3, commit `e86cc11`): v1 GAGAL, v2 LULUS, RESULT: PASS; file hasil resmi ada di `docs/results/` (riwayat di bagian 7). Waktu proses bervariasi sekitar 30% antar-run (median per panggilan, dua run: analitik 5,8 dan 7,5 µs; Newton 238 dan 232 µs), sehingga rasio kecepatan tidak dikutip sebagai klaim tunggal. Trajektori (W4), mesin pengguna (Windows, Python 3.14.3, commit `69292d6`): C1–C7 terpenuhi, RESULT: PASS (galat endpoint 4.4e-16 rad; selisih relatif koefisien NMT 4.6e-16); file hasil di `docs/results/trajectory_*` |
 | API NMT v1.0.0 (nama, signature, perilaku IK dan Gaussian) | Dibaca dari kode dan di-smoke-test (install bersih, IK, target di luar jangkauan, sistem kubik 4×4) |
 | NMT v1.0.0: test suite dan lint | Terverifikasi di sesi ini (clone `e9e6a4e`, Python venv bersih): `pytest` 470 lulus, `ruff check` bersih |
 | NMT v1.0.0: build paket dan status CI GitHub | Belum diverifikasi |
