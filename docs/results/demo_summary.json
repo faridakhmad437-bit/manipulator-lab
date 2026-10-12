@@ -1,0 +1,61 @@
+{
+  "experiment": "demo",
+  "arm": {
+    "l1": 1.0,
+    "l2": 0.8
+  },
+  "scenario": {
+    "q0": [
+      -0.5,
+      -0.3
+    ],
+    "target": [
+      -0.6,
+      1.0
+    ],
+    "duration_s": 2.0,
+    "profile": "cubic",
+    "branch": "elbow_up",
+    "animation_frames": 60,
+    "fps": 20,
+    "hold_frames": 20,
+    "unreachable_target": [
+      1.6,
+      1.2
+    ]
+  },
+  "criteria_values": {
+    "D1_first_frame_tip_error_m": 0.0,
+    "D1_last_frame_tip_error_m": 5.551115123125783e-16,
+    "D2_max_link_length_error_m": 2.220446049250313e-16,
+    "D3_gif_format": "GIF",
+    "D3_gif_frames_after_encoding": 60,
+    "D3_gif_bytes": 316558,
+    "D3_gif_size_px": [
+      460,
+      460
+    ],
+    "D3_pngs_valid": true,
+    "D4_unreachable_ok": false,
+    "D4_unreachable_reason": "target_beyond_max_reach",
+    "D4_unreachable_has_trajectory": false
+  },
+  "criteria_pass": {
+    "D1": true,
+    "D2": true,
+    "D3": true,
+    "D4": true
+  },
+  "environment": {
+    "python": "3.14.3",
+    "python_implementation": "CPython",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+    "logical_cpus": 16,
+    "numpy": "2.5.4",
+    "manipulator_lab": "0.5.0",
+    "git_commit": "4d23237",
+    "numerical_toolkit": "1.0.0"
+  }
+}
