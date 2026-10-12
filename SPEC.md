@@ -1,7 +1,7 @@
 # SPEC — Manipulator Lab: Kinematics and Trajectory Planning
 
 **Owner:** Farid Akhmad
-**Status:** DRAFT v0.4 (minggu 2 selesai: Jacobian, kondisi, singularitas, peta workspace)
+**Status:** DRAFT v0.5 (minggu 3 selesai: IK numerik via NMT dan perbandingan dengan IK analitik)
 **Tanggal:** 12 Oktober 2026
 **Posisi dalam roadmap:** Project 1, setelah Numerical Method Toolkit (NMT)
 **Estimasi:** 4–6 minggu (5–7 jam/minggu)
@@ -215,8 +215,8 @@ Tes ditulis lebih dulu (test-first) untuk tiap kelompok.
 | Sudut θ₂ di batas workspace | 1e-6 rad | Dipakai; galat teramati 0 |
 | cond(J): SVD vs rumus tertutup | relatif 1e-9 (di luar |sin θ₂| < 1e-3 pada tes) | Dipakai; galat relatif maksimum teramati 5.0e-14 pada 102.564 sel peta (eksperimen, sandbox) |
 | Ambang singularitas | |sin θ₂| < 1e-6 | Dipakai |
-| Newton vs analitik (sudut) | 1e-6 rad, hanya jauh dari singularitas | Belum diuji (kelompok D) |
-| Residual Newton | ≤ 1e-9 m (default NMT `ftol` = 1e-10) | Belum diuji (kelompok D) |
+| Newton vs analitik (sudut) | 1e-6 rad, hanya jauh dari singularitas | Dipakai; selisih maksimum teramati 8.9e-16 rad pada 936 target (eksperimen v2, sandbox) |
+| Residual Newton | ≤ 1e-9 m (default NMT `ftol` = 1e-10) | Dipakai; maksimum teramati 7.8e-16 m; iterasi median 5, maksimum 6 (eksperimen v2, sandbox) |
 | Endpoint trajektori (posisi, kecepatan) | 1e-12 | Belum diuji (kelompok C) |
 
 Aturan: toleransi tidak boleh dilonggarkan agar tes lulus. Perubahan harus disertai pengukuran galat dan alasannya. Kelonggaran saat ini jauh di atas galat teramati (1e-9 vs 1.3e-15); boleh diperketat setelah dibandingkan di mesin lain.
@@ -241,6 +241,17 @@ Aturan: toleransi tidak boleh dilonggarkan agar tes lulus. Perubahan harus diser
 | CPU | 13th Gen Intel Core i5-13450HX |
 
 Angka runtime di README hanya boleh berasal dari mesin ini. Tes yang dijalankan di sandbox Linux (Python 3.13) hanya dipakai untuk verifikasi fungsional, bukan untuk angka performa. Skrip eksperimen perlu mencetak ulang versi Python/NumPy/OS/CPU ke `docs/results/` setiap kali dijalankan.
+
+### Riwayat pra-registrasi eksperimen IK (minggu 3)
+
+Dicatat apa adanya, termasuk kegagalan:
+
+- **v1 (pra-registrasi, margin 0,05 m dari batas): GAGAL.** Tebakan awal default tidak mendarat di cabang yang diminta pada seluruh target (1080 konvergen, 1008 di cabang yang diminta). Penyebabnya diselidiki lewat bagian A2 (pemindaian cabang terhadap jarak ke batas): di dekat batas dalam, cabang yang dicapai bergantian 0%/100% menurut radius (basin saling berselang-seling).
+- **v2 (post hoc, margin 0,30 m, grid baru): LULUS di sandbox** (936/936 konvergen di cabang yang diminta). Kriteria v2 dibuat setelah melihat kegagalan v1, sehingga bukan konfirmasi independen; v1 tetap dipertahankan di skrip dan laporan.
+- **H1** (konvergensi lebih lambat mendekati singularitas): terkonfirmasi hanya untuk batas luar (iterasi 6, 8, 9, 11, 12, 14, 16, 17 untuk celah 1e-1 … 1e-8). Di batas dalam polanya tidak monoton.
+- **H2** (konvergensi linier pada akar singular, celah 0): terkonfirmasi; rasio langkah tepat 0,5 dan 28 iterasi, dibanding 6 di interior.
+- **H3** (besaran galat sudut mengikuti kondisi): besarnya tidak didukung data.
+- Start acak: 88% konvergen (seed 0, N = 2000; 836 elbow-up, 924 elbow-down, 240 mencapai batas iterasi).
 
 ---
 
@@ -294,6 +305,7 @@ Jika waktu mingguan hanya 2–3 jam, perpanjang jadwal, jangan pangkas tes dan d
 | Galat di batas workspace (floating-point) | Toleransi eksplisit dan tes kelompok B |
 | Klaim performa tanpa dasar | Aturan NFR-1 dan protokol evaluasi bagian 7 |
 | Animasi memakan waktu | Visualisasi ditunda ke minggu 5; logika diuji tanpa plot |
+| Tebakan awal default tidak andal memilih cabang di dekat batas dalam (terlipat), sekitar 0,3 m dari batas | Terukur di minggu 3 (cabang yang dicapai bergantian menurut radius). Di zona itu berikan `initial=` secara eksplisit; jangan mengandalkan `default_initial_guess` |
 
 ---
 
@@ -312,9 +324,9 @@ Jika waktu mingguan hanya 2–3 jam, perpanjang jadwal, jangan pangkas tes dan d
 | Item | Status |
 |---|---|
 | Spesifikasi ini | Draft, belum direview |
-| Implementasi | Sebagian: `arm.py`, `kinematics.py` (FK, IK analitik, reachability, Jacobian, kondisi, singularitas), `workspace.py` (batas, peta kondisi) |
-| Tes | Kelompok A–B: 75 tes lulus di mesin Windows pengguna (Python 3.14.3, pytest 9.1.1), `ruff` bersih (commit `f443469`). Minggu 2 (Jacobian, kondisi, workspace): 141 tes total lulus di sandbox Linux/Python 3.13, `ruff` bersih, 5 uji mutasi terdeteksi; **belum dijalankan di mesin Windows pengguna**. Kelompok C–D belum ditulis |
-| Hasil eksperimen | Conditioning: kriteria sukses terpenuhi di sandbox (selisih relatif SVD vs rumus tertutup 5.0e-14; cond ≥ 1 di semua sel). File hasil resmi dibuat oleh `experiments/run_conditioning.py` di mesin pengguna |
+| Implementasi | Sebagian: `arm.py`, `kinematics.py` (FK, IK analitik, reachability, Jacobian, kondisi, singularitas), `workspace.py` (batas, peta kondisi), `ik_numeric.py` (adapter Newton NMT). Trajektori belum |
+| Tes | Minggu 2: 141 tes lulus di mesin Windows pengguna (commit `97b7bff`). Minggu 3 (kelompok D): 180 tes total lulus di sandbox Linux/Python 3.13, `ruff` bersih; 6 uji mutasi, 1 awalnya lolos (penghapusan wrap sudut) lalu ditutup dengan tes baru; **belum dijalankan di mesin Windows pengguna**. Kelompok C belum ditulis |
+| Hasil eksperimen | Conditioning: PASS di mesin pengguna (selisih relatif maksimum 4.7e-14, 102.564 sel). IK numerik: v1 GAGAL, v2 LULUS di sandbox (lihat riwayat di bagian 7); file hasil resmi dibuat oleh `experiments/run_ik_comparison.py` di mesin pengguna |
 | API NMT v1.0.0 (nama, signature, perilaku IK dan Gaussian) | Dibaca dari kode dan di-smoke-test (install bersih, IK, target di luar jangkauan, sistem kubik 4×4) |
 | NMT v1.0.0: test suite dan lint | Terverifikasi di sesi ini (clone `e9e6a4e`, Python venv bersih): `pytest` 470 lulus, `ruff check` bersih |
 | NMT v1.0.0: build paket dan status CI GitHub | Belum diverifikasi |

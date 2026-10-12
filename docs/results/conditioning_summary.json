@@ -67,8 +67,8 @@
     "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
     "logical_cpus": 16,
     "numpy": "2.5.4",
-    "manipulator_lab": "0.2.0",
-    "git_commit": "f443469",
+    "manipulator_lab": "0.3.0",
+    "git_commit": "97b7bff",
     "numerical_toolkit": "1.0.0"
   }
 }
