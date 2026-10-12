@@ -19,6 +19,12 @@ from .arm import PlanarArm
 REACH_TOL = 1e-9
 """Absolute slack (metres) on the workspace radii; absorbs float noise only."""
 
+SINGULARITY_TOL = 1e-6
+"""Threshold on |sin(theta2)| below which a pose is treated as singular."""
+
+_RANK_DEFICIENT_FACTOR = 10.0
+"""cond(J) is reported as inf when sigma_min <= factor * eps * sigma_max."""
+
 BEYOND_MAX_REACH = "target_beyond_max_reach"
 INSIDE_MIN_REACH = "target_inside_min_reach"
 
@@ -123,3 +129,51 @@ def ik_analytic(
         branch=branch,
         reason=None,
     )
+
+
+def jacobian(arm: PlanarArm, theta: object) -> np.ndarray:
+    """2x2 Jacobian d(x, y)/d(theta1, theta2); det J = l1 * l2 * sin(theta2)."""
+    t1, t2 = _vector2(theta, "theta")
+    s1, c1 = math.sin(t1), math.cos(t1)
+    s12, c12 = math.sin(t1 + t2), math.cos(t1 + t2)
+    return np.array(
+        [
+            [-arm.l1 * s1 - arm.l2 * s12, -arm.l2 * s12],
+            [arm.l1 * c1 + arm.l2 * c12, arm.l2 * c12],
+        ]
+    )
+
+
+def is_singular(theta: object, *, tol: float = SINGULARITY_TOL) -> bool:
+    """True when |sin(theta2)| < ``tol`` (arm fully stretched or fully folded)."""
+    _, t2 = _vector2(theta, "theta")
+    return abs(math.sin(t2)) < tol
+
+
+def condition_number(arm: PlanarArm, theta: object) -> float:
+    """2-norm condition number of the Jacobian, computed from its singular values.
+
+    Returns ``inf`` when J is numerically rank-deficient
+    (sigma_min <= 10 * eps * sigma_max), i.e. at the singular poses.
+    """
+    sigma = np.linalg.svd(jacobian(arm, theta), compute_uv=False)
+    if sigma[-1] <= _RANK_DEFICIENT_FACTOR * np.finfo(float).eps * sigma[0]:
+        return math.inf
+    return float(sigma[0] / sigma[-1])
+
+
+def condition_from_theta2(arm: PlanarArm, theta2: float) -> float:
+    """Closed-form cond(J); it depends on theta2 only.
+
+    With F = ||J||_F^2 = l1^2 + 2 l2^2 + 2 l1 l2 cos(theta2) and
+    D = |det J| = l1 l2 |sin(theta2)|, the singular values satisfy
+    sigma1^2 + sigma2^2 = F and sigma1 * sigma2 = D, so
+    cond = sigma1 / sigma2 = sigma1^2 / D.
+    """
+    (_, t2) = _vector2((0.0, theta2), "theta2")
+    frobenius_sq = arm.l1**2 + 2.0 * arm.l2**2 + 2.0 * arm.l1 * arm.l2 * math.cos(t2)
+    det = arm.l1 * arm.l2 * abs(math.sin(t2))
+    sigma1_sq = 0.5 * (frobenius_sq + math.sqrt(max(frobenius_sq**2 - 4.0 * det**2, 0.0)))
+    if det <= _RANK_DEFICIENT_FACTOR * np.finfo(float).eps * sigma1_sq:
+        return math.inf
+    return sigma1_sq / det

@@ -1,0 +1,74 @@
+{
+  "experiment": "conditioning",
+  "arm": {
+    "l1": 1.0,
+    "l2": 0.8
+  },
+  "grid_resolution": 401,
+  "grid_extent_m": 1.9800000000000002,
+  "reachable_cells": 102564,
+  "finite_cond_cells": 102564,
+  "fraction_of_reachable_cells": {
+    "cond_le_10": 0.9423189423189423,
+    "cond_gt_100": 0.000546000546000546
+  },
+  "min_cond_over_theta2_curve": 1.1902060217080246,
+  "theta2_at_min_rad": 2.349802844261922,
+  "samples": [
+    {
+      "theta2_rad": 1.5707963267948966,
+      "cond_svd": 2.440197025212348,
+      "cond_closed_form": 2.4401970252123477
+    },
+    {
+      "theta2_rad": 1.0,
+      "cond_svd": 4.446200129811039,
+      "cond_closed_form": 4.446200129811038
+    },
+    {
+      "theta2_rad": 0.5,
+      "cond_svd": 9.500330429026725,
+      "cond_closed_form": 9.500330429026722
+    },
+    {
+      "theta2_rad": 0.1,
+      "cond_svd": 48.460208834872226,
+      "cond_closed_form": 48.46020883487217
+    },
+    {
+      "theta2_rad": 0.01,
+      "cond_svd": 484.99602147173357,
+      "cond_closed_form": 484.9960214717218
+    },
+    {
+      "theta2_rad": 0.001,
+      "cond_svd": 4849.999602146562,
+      "cond_closed_form": 4849.99960214776
+    },
+    {
+      "theta2_rad": 1e-06,
+      "cond_svd": 4850000.000936845,
+      "cond_closed_form": 4849999.999999602
+    }
+  ],
+  "criteria": {
+    "max_rel_diff_svd_vs_closed_form": 4.665398816191149e-14,
+    "rel_tolerance": 1e-09,
+    "cells_compared": 102564,
+    "min_cond_on_reachable_cells": 1.1901974603746237,
+    "criterion_1_pass": true,
+    "criterion_2_pass": true
+  },
+  "environment": {
+    "python": "3.14.3",
+    "python_implementation": "CPython",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "machine": "AMD64",
+    "cpu": "13th Gen Intel(R) Core(TM) i5-13450HX",
+    "logical_cpus": 16,
+    "numpy": "2.5.4",
+    "manipulator_lab": "0.2.0",
+    "git_commit": "f443469",
+    "numerical_toolkit": "1.0.0"
+  }
+}

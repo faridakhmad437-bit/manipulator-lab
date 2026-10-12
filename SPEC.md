@@ -1,7 +1,7 @@
 # SPEC — Manipulator Lab: Kinematics and Trajectory Planning
 
 **Owner:** Farid Akhmad
-**Status:** DRAFT v0.3 (semua keputusan terbuka terisi; tes kelompok A–B dan FK/IK analitik/reachability sudah ada)
+**Status:** DRAFT v0.4 (minggu 2 selesai: Jacobian, kondisi, singularitas, peta workspace)
 **Tanggal:** 12 Oktober 2026
 **Posisi dalam roadmap:** Project 1, setelah Numerical Method Toolkit (NMT)
 **Estimasi:** 4–6 minggu (5–7 jam/minggu)
@@ -80,6 +80,8 @@ J(θ) = [ −l₁ sin θ₁ − l₂ sin(θ₁+θ₂)    −l₂ sin(θ₁+θ₂
 det J = l₁ l₂ sin θ₂
 ```
 Singularitas terjadi saat sin θ₂ = 0 (lengan terentang penuh atau terlipat penuh). Di dekat titik itu, J ill-conditioned: iterasi Newton memerlukan solusi sistem linear dengan matriks hampir singular, sehingga langkah iterasi bisa membesar dan konvergensi memburuk. Ini harus diperlihatkan lewat eksperimen (nomor kondisi vs θ₂, iterasi Newton vs jarak ke batas workspace).
+
+**Nomor kondisi (diturunkan dan diverifikasi minggu 2).** Dengan F = ‖J‖²_F = l₁² + 2l₂² + 2l₁l₂ cos θ₂ dan D = |det J| = l₁l₂ |sin θ₂|, nilai singular memenuhi σ₁² + σ₂² = F dan σ₁σ₂ = D. Maka cond(J) = σ₁²/D, dengan σ₁² = ½(F + √(F² − 4D²)). Nilainya **hanya bergantung pada θ₂** (tidak pada θ₁ maupun cabang IK), sehingga petanya berupa cincin konsentris. Implementasi: `condition_number` (SVD) dan `condition_from_theta2` (rumus tertutup), keduanya `inf` bila σ_min ≤ 10·ε·σ_max. Ambang bendera singularitas: |sin θ₂| < 1e-6 (`SINGULARITY_TOL`).
 
 ### 3.5 Trajektori joint-space
 Untuk setiap joint dari q₀ ke q_f dalam durasi T:
@@ -211,6 +213,8 @@ Tes ditulis lebih dulu (test-first) untuk tiap kelompok.
 | FK(IK analitik(target)) vs target | 1e-9 m (ruang posisi) | Dipakai di tes A–B; galat teramati 1.3e-15 m (grid 25×25 × 2 cabang) |
 | Cek jangkauan (`REACH_TOL`) | 1e-9 m pada radius | Dipakai; hanya menyerap noise float |
 | Sudut θ₂ di batas workspace | 1e-6 rad | Dipakai; galat teramati 0 |
+| cond(J): SVD vs rumus tertutup | relatif 1e-9 (di luar |sin θ₂| < 1e-3 pada tes) | Dipakai; galat relatif maksimum teramati 5.0e-14 pada 102.564 sel peta (eksperimen, sandbox) |
+| Ambang singularitas | |sin θ₂| < 1e-6 | Dipakai |
 | Newton vs analitik (sudut) | 1e-6 rad, hanya jauh dari singularitas | Belum diuji (kelompok D) |
 | Residual Newton | ≤ 1e-9 m (default NMT `ftol` = 1e-10) | Belum diuji (kelompok D) |
 | Endpoint trajektori (posisi, kecepatan) | 1e-12 | Belum diuji (kelompok C) |
@@ -308,9 +312,9 @@ Jika waktu mingguan hanya 2–3 jam, perpanjang jadwal, jangan pangkas tes dan d
 | Item | Status |
 |---|---|
 | Spesifikasi ini | Draft, belum direview |
-| Implementasi | Sebagian: `arm.py`, `kinematics.py` (FK, IK analitik, reachability) |
-| Tes | Kelompok A–B ditulis test-first: 75 tes lulus di sandbox Linux/Python 3.13, `ruff` bersih, 3 uji mutasi terdeteksi; dijalankan juga di mesin Windows pengguna: 75 lulus (Python 3.14.3, pytest 9.1.1), ruff bersih. Kelompok C–D belum ditulis |
-| Hasil eksperimen | Belum ada |
+| Implementasi | Sebagian: `arm.py`, `kinematics.py` (FK, IK analitik, reachability, Jacobian, kondisi, singularitas), `workspace.py` (batas, peta kondisi) |
+| Tes | Kelompok A–B: 75 tes lulus di mesin Windows pengguna (Python 3.14.3, pytest 9.1.1), `ruff` bersih (commit `f443469`). Minggu 2 (Jacobian, kondisi, workspace): 141 tes total lulus di sandbox Linux/Python 3.13, `ruff` bersih, 5 uji mutasi terdeteksi; **belum dijalankan di mesin Windows pengguna**. Kelompok C–D belum ditulis |
+| Hasil eksperimen | Conditioning: kriteria sukses terpenuhi di sandbox (selisih relatif SVD vs rumus tertutup 5.0e-14; cond ≥ 1 di semua sel). File hasil resmi dibuat oleh `experiments/run_conditioning.py` di mesin pengguna |
 | API NMT v1.0.0 (nama, signature, perilaku IK dan Gaussian) | Dibaca dari kode dan di-smoke-test (install bersih, IK, target di luar jangkauan, sistem kubik 4×4) |
 | NMT v1.0.0: test suite dan lint | Terverifikasi di sesi ini (clone `e9e6a4e`, Python venv bersih): `pytest` 470 lulus, `ruff check` bersih |
 | NMT v1.0.0: build paket dan status CI GitHub | Belum diverifikasi |
