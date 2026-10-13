@@ -1,7 +1,7 @@
 # SPEC — Manipulator Lab: Kinematics and Trajectory Planning
 
 **Owner:** Farid Akhmad
-**Status:** DRAFT v0.8 (minggu 6 selesai di sandbox: catatan teknik dan README; menunggu verifikasi dan rilis)
+**Status:** v1.0.0 (semua minggu selesai dan terverifikasi di mesin pengguna; satu butir DoD masih terbuka: kontribusi pribadi, ditulis oleh penulis)
 **Tanggal:** 12 Oktober 2026
 **Posisi dalam roadmap:** Project 1, setelah Numerical Method Toolkit (NMT)
 **Estimasi:** 4–6 minggu (5–7 jam/minggu)
@@ -281,7 +281,7 @@ Kriteria C1–C7 ditulis di docstring `experiments/run_trajectory.py` sebelum di
 ## 9. Kriteria keberhasilan (Definition of Done)
 
 - [x] Pengguna baru dapat menginstal, menjalankan simulator, mengubah target, dan melihat hasil reachable/unreachable. (Bukti: instalasi venv bersih oleh penulis di Windows dan simulasi di sandbox, contoh README dijalankan, demo reachable/unreachable. Belum diuji oleh orang lain.)
-- [ ] Seluruh tes kelompok A–D lulus pada commit rilis.
+- [x] Seluruh tes kelompok A–D lulus pada commit rilis. (279 tes lulus dan `ruff` bersih di mesin pengguna pada pohon kerja yang menjadi tag `v1.0.0`.)
 - [x] IK analitik dan numerik dibandingkan pada target yang sama, hasil terdokumentasi. (`docs/results/ik_comparison_summary.json`, bagian 7.)
 - [x] Perilaku di dekat singularitas dijelaskan dengan bukti (plot/tabel). (`docs/ENGINEERING_NOTE.md`, plot `ik_*.png` dan `conditioning_*.png`.)
 - [x] Trajektori cubic terbukti memenuhi syarat batas dan dibandingkan dengan linear.

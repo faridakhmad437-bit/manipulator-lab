@@ -109,3 +109,7 @@ experiments/           run_conditioning.py, run_ik_comparison.py, run_trajectory
                        trace_newton.py, env_info.py
 docs/                  ENGINEERING_NOTE.md; results/ holds recorded plots, tables and environment metadata
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
