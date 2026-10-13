@@ -55,7 +55,7 @@
     "logical_cpus": 16,
     "numpy": "2.5.4",
     "manipulator_lab": "0.5.0",
-    "git_commit": "4d23237",
+    "git_commit": "1cb227d",
     "numerical_toolkit": "1.0.0"
   }
 }
